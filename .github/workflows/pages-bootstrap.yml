@@ -9,39 +9,26 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pages: write
-      id-token: write
     steps:
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const { owner, repo } = context.repo;
-            let log = 'repo=' + owner + '/' + repo + '\n';
-            try {
-              await github.rest.pages.create({
-                owner, repo,
-                source: { branch: 'main', path: '/' },
-              });
-              log += 'RESULT: created\n';
-            } catch (e) {
-              log += 'RESULT: caught status=' + e.status + '\nmessage=' + e.message + '\n';
-              if (e.response && e.response.data) log += 'data=' + JSON.stringify(e.response.data).slice(0, 2000) + '\n';
-              if (e.status === 409 || /already exists/i.test(e.message)) {
-                try {
-                  await github.rest.pages.update({ owner, repo, source: { branch: 'main', path: '/' } });
-                  log += 'RESULT: updated existing\n';
-                } catch (e2) {
-                  log += 'UPDATE FAILED status=' + e2.status + '\nmessage=' + e2.message + '\n';
-                  if (e2.response && e2.response.data) log += 'data=' + JSON.stringify(e2.response.data).slice(0, 2000) + '\n';
-                }
-              } else {
-                throw new Error('pages.create failed: status=' + e.status + ' message=' + e.message);
-              }
-            }
-            fs.writeFileSync('/tmp/pages-bootstrap.log', log);
-            console.log(log);
-      - name: Post diagnostic log (public)
-        if: always()
+      - name: Create Pages site via REST
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          URL=$(curl -s --max-time 30 -F "file=@/tmp/pages-bootstrap.log" https://0x0.st || echo POST_FAILED)
-          echo "::notice::DIAGLOG_URL=$URL"
+          set -x
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          echo "target=$OWNER/$REPO"
+          CODE=$(curl -s -o /tmp/pages_resp.json -w "%{http_code}" \
+            -X POST "https://api.github.com/repos/$OWNER/$REPO/pages" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json")
+          echo "HTTP=$CODE"
+          cat /tmp/pages_resp.json | head -c 1500
+          if [ "$CODE" = "409" ]; then
+            CODE2=$(curl -s -o /tmp/pages_upd.json -w "%{http_code}" \
+              -X PUT "https://api.github.com/repos/$OWNER/$REPO/pages" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -d '{"source":{"branch":"main","path":"/"}}')
+            echo "UPDATE_HTTP=$CODE2"; cat /tmp/pages_upd.json | head -c 1500
+          fi
