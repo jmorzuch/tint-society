@@ -781,8 +781,8 @@ if(toTop) toTop.addEventListener("click", function(){ window.scrollTo({top:0,beh
 
 /* ---------- mobile menu ---------- */
 var burger=document.getElementById("burger");
-function closeMenu(){ document.body.classList.remove("menu-open"); document.body.style.overflow=""; }
-if(burger) burger.addEventListener("click", function(){ var open=document.body.classList.toggle("menu-open"); if(open)document.body.style.overflow="hidden"; });
+function closeMenu(){ document.body.classList.remove("menu-open"); document.documentElement.style.overflow=""; document.body.style.overflow=""; }
+if(burger) burger.addEventListener("click", function(){ var open=document.body.classList.toggle("menu-open"); document.documentElement.style.overflow=open?"hidden":""; if(open)document.body.style.overflow="hidden"; else document.body.style.overflow=""; });
 document.querySelectorAll("#mobileMenu a").forEach(function(a){ a.addEventListener("click", closeMenu); });
 
 /* ---------- custom cursor ---------- */
