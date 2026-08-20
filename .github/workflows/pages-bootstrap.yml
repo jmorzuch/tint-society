@@ -22,13 +22,12 @@ jobs:
             -X POST "https://api.github.com/repos/$OWNER/$REPO/pages" \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json")
-          echo "HTTP=$CODE"
-          cat /tmp/pages_resp.json | head -c 1500
+          echo "::notice::PAGES_CREATE_HTTP=$CODE BODY=$(head -c 600 /tmp/pages_resp.json | tr '\n' ' ')"
           if [ "$CODE" = "409" ]; then
             CODE2=$(curl -s -o /tmp/pages_upd.json -w "%{http_code}" \
               -X PUT "https://api.github.com/repos/$OWNER/$REPO/pages" \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               -d '{"source":{"branch":"main","path":"/"}}')
-            echo "UPDATE_HTTP=$CODE2"; cat /tmp/pages_upd.json | head -c 1500
+            echo "::notice::PAGES_UPDATE_HTTP=$CODE2 BODY=$(head -c 600 /tmp/pages_upd.json | tr '\n' ' ')"
           fi
